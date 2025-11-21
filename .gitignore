@@ -1,2 +1,3 @@
 /data/*
+!data/player_match_stats_2018/
 data.zip
