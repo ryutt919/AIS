@@ -245,7 +245,7 @@ def get_default_config() -> Dict[str, Any]:
         "paths": {
             "data_dir": "data/wyscout",
             "processed_dir": "data/processed",
-            "models_dir": "data/models",
+            "models_dir": "models",
             "results_dir": "data/vaep_results",
             "logs_dir": "logs",
         },

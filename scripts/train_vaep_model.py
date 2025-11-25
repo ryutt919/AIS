@@ -88,7 +88,7 @@ def parse_args():
         args.input
         or f"../{paths_config['processed_dir']}/{config['preprocessing']['output_train']}"
     )
-    args.output_dir = args.output_dir or f"../{paths_config['models_dir']}"
+    args.output_dir = args.output_dir or f"../{paths_config['models_dir']}"  # models folder at project root
     args.horizon = args.horizon or train_config["horizon"]
     args.hidden_dims = args.hidden_dims or train_config["hidden_dims"]
     args.batch_size = args.batch_size or train_config["batch_size"]

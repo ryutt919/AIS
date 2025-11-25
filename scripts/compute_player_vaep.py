@@ -38,13 +38,13 @@ def parse_args():
     parser.add_argument(
         "--model_path",
         type=str,
-        default="../data/models/vaep_model.pt",
+        default="../models/vaep_model.pt",
         help="학습된 모델 경로",
     )
     parser.add_argument(
         "--config_path",
         type=str,
-        default="../data/models/vaep_config.json",
+        default="../models/vaep_config.json",
         help="모델 설정 파일 경로",
     )
     parser.add_argument(
@@ -291,6 +291,10 @@ def extract_player_minutes(
 
     return df
 
+
+def compute_player_match_vaep(
+    df: pd.DataFrame, player_minutes_df: pd.DataFrame, player_roles: Dict[int, str], logger: logging.Logger
+) -> pd.DataFrame:
     """
     선수-경기별 VAEP를 계산합니다.
     (이벤트는 모두 포함, 골키퍼 선수의 집계만 제외)
