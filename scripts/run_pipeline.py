@@ -56,6 +56,11 @@ def main():
     parser.add_argument(
         "--skip-evaluate", action="store_true", help="평가 단계 건너뛰기"
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="디버그 모드: 5개 매치만 처리, 3 에포크만 학습"
+    )
     args = parser.parse_args()
 
     # 로거 설정
@@ -78,9 +83,17 @@ def main():
 
     success = True
 
+    # 디버그 모드 알림
+    if args.debug:
+        logger.warning("\n" + "=" * 80)
+        logger.warning("DEBUG MODE: Running with limited data and epochs")
+        logger.warning("=" * 80 + "\n")
+
     # 1. 전처리
     if not args.skip_preprocess:
         cmd = [sys.executable, os.path.join(script_dir, "preprocess_wyscout.py")]
+        if args.debug:
+            cmd.append("--debug")
         if not run_command(cmd, "Data Preprocessing", logger):
             success = False
             logger.error("Preprocessing failed. Stopping pipeline.")
@@ -93,6 +106,8 @@ def main():
         cmd = [sys.executable, os.path.join(script_dir, "train_vaep_model.py")]
         if args.config:
             cmd.extend(["--config", args.config])
+        if args.debug:
+            cmd.append("--debug")
         if not run_command(cmd, "Model Training", logger):
             success = False
             logger.error("Training failed. Stopping pipeline.")

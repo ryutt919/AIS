@@ -50,11 +50,16 @@ def parse_args():
         "--output_dir", type=str, default="../data/processed", help="출력 디렉토리 경로"
     )
     parser.add_argument("--log_file", type=str, default=None, help="로그 파일 경로")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="디버그 모드: 5개 매치만 처리"
+    )
     return parser.parse_args()
 
 
 def process_events(
-    events_df: pd.DataFrame, league: str, logger: logging.Logger
+    events_df: pd.DataFrame, league: str, logger: logging.Logger, max_matches: int = None
 ) -> pd.DataFrame:
     """
     이벤트 데이터를 VAEP 스키마로 변환합니다.
@@ -71,10 +76,17 @@ def process_events(
         events_df: 원본 이벤트 DataFrame
         league: 리그 이름
         logger: 로거 객체
+        max_matches: 최대 처리할 매치 수 (디버그용)
 
     Returns:
         전처리된 DataFrame
     """
+    # 디버그 모드: 매치 수 제한
+    if max_matches is not None:
+        unique_matches = events_df['matchId'].unique()[:max_matches]
+        events_df = events_df[events_df['matchId'].isin(unique_matches)].copy()
+        logger.info(f"[DEBUG MODE] Limited to {len(unique_matches)} matches")
+    
     logger.info(f"Processing {len(events_df)} events from {league}")
 
     # 기본 컬럼 복사
@@ -93,6 +105,9 @@ def process_events(
     processed["tags_list"] = processed["tags"].apply(extract_tags)
     processed["is_goal"] = processed["tags_list"].apply(is_goal).astype(int)
     processed["is_successful"] = processed["tags_list"].apply(is_successful).astype(int)
+    # CSV 저장을 위해 JSON 문자열로 변환
+    import json
+    processed["tags_list"] = processed["tags_list"].apply(json.dumps)
 
     # 이동 거리 및 방향
     logger.info("Computing movement features...")
@@ -242,6 +257,13 @@ def main():
             "World_Cup": "events_World_Cup.json",
         }
 
+        # 디버그 모드 설정
+        max_matches = 5 if args.debug else None
+        if args.debug:
+            logger.warning("\n" + "=" * 80)
+            logger.warning("DEBUG MODE ENABLED: Processing only 5 matches per league")
+            logger.warning("=" * 80 + "\n")
+
         # 학습용 데이터 (England 제외)
         train_events = []
 
@@ -269,7 +291,7 @@ def main():
             events_df = load_wyscout_events(data_dir, league)
 
             # 전처리
-            processed_df = process_events(events_df, league, logger)
+            processed_df = process_events(events_df, league, logger, max_matches=max_matches)
 
             # England는 평가용으로, 나머지는 학습용으로 분리
             if league == "England":

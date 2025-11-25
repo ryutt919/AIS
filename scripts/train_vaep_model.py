@@ -70,6 +70,11 @@ def parse_args():
     parser.add_argument("--val_ratio", type=float, default=None, help="검증 세트 비율")
     parser.add_argument("--random_seed", type=int, default=None, help="랜덤 시드")
     parser.add_argument("--log_file", type=str, default=None, help="로그 파일 경로")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="디버그 모드: 에포크 수를 3으로 제한"
+    )
 
     args = parser.parse_args()
 
@@ -91,6 +96,10 @@ def parse_args():
     args.lr = args.lr or train_config["learning_rate"]
     args.val_ratio = args.val_ratio or train_config["val_ratio"]
     args.random_seed = args.random_seed or train_config["random_seed"]
+
+    # 디버그 모드: 에포크 수 제한
+    if args.debug:
+        args.epochs = 3
 
     return args, config
 
@@ -184,10 +193,13 @@ def create_state_features(
 
     VAEP state representation:
     - 이벤트 타입 (원핫 인코딩)
+    - 서브이벤트 타입 (원핫 인코딩)
+    - 태그 (멀티-핫 인코딩)
     - 위치 특징 (start_x, start_y, end_x, end_y)
     - 골 관련 특징 (goal_distance, goal_angle)
     - 이동 특징 (distance, angle)
     - 성공 여부 (is_successful)
+    - 피리어드 (원핫 인코딩)
 
     Args:
         df: 이벤트 DataFrame
@@ -198,40 +210,83 @@ def create_state_features(
     """
     logger.info("Creating state features...")
 
+    # 사용할 서브이벤트 ID 정의 (Duel, Foul, Free Kick, Others on the ball, Pass, Shot)
+    SUBEVENT_IDS = [10, 11, 12, 13, 20, 21, 22, 23, 24, 25, 27, 30, 31, 32, 33, 34, 35, 36, 70, 71, 72, 80, 81, 82, 83, 84, 85, 86, 100]
+    
+    # 사용할 태그 ID 정의
+    TAG_IDS = [101, 102, 201, 301, 302, 403, 501, 502, 503, 504, 601, 602, 701, 702, 703, 801, 802, 901, 1101, 1102, 1201, 1202, 1203, 1204, 1205, 1206, 1207, 1208, 1209, 1210, 1211, 1212, 1213, 1214, 1215, 1216, 1217, 1218, 1219, 1220, 1221, 1222, 1223, 1301, 1302, 1401, 1501, 1601, 1701, 1702, 1703, 1801, 1802, 2001, 2101]
+
     feature_list = []
     feature_names = []
 
-    # 1. 이벤트 타입 원핫 인코딩
+    # 1. 이벤트 타입 원핫 인코딩 (1-10 전체 사용)
     event_types = pd.get_dummies(df["eventId"], prefix="event")
     feature_list.append(event_types.values)
     feature_names.extend(event_types.columns.tolist())
     logger.info(f"  - Event types: {event_types.shape[1]} features")
 
-    # 2. 위치 특징
+    # 2. 서브이벤트 타입 원핫 인코딩 (지정된 ID만 사용)
+    subevent_features = np.zeros((len(df), len(SUBEVENT_IDS)), dtype=np.float32)
+    subevent_id_to_idx = {sid: idx for idx, sid in enumerate(SUBEVENT_IDS)}
+    
+    for i, subevent_id in enumerate(df["subEventId"]):
+        if subevent_id in subevent_id_to_idx:
+            subevent_features[i, subevent_id_to_idx[subevent_id]] = 1.0
+    
+    feature_list.append(subevent_features)
+    feature_names.extend([f"subevent_{sid}" for sid in SUBEVENT_IDS])
+    logger.info(f"  - Sub-event types: {len(SUBEVENT_IDS)} features")
+
+    # 3. 태그 멀티-핫 인코딩 (지정된 ID만 사용)
+    import json
+    tag_features = np.zeros((len(df), len(TAG_IDS)), dtype=np.float32)
+    tag_id_to_idx = {tid: idx for idx, tid in enumerate(TAG_IDS)}
+    
+    for i, tags_str in enumerate(df["tags_list"]):
+        # JSON 문자열을 리스트로 파싱
+        if isinstance(tags_str, str):
+            try:
+                tags = json.loads(tags_str)
+            except:
+                tags = []
+        elif isinstance(tags_str, list):
+            tags = tags_str
+        else:
+            tags = []
+        
+        for tag in tags:
+            if tag in tag_id_to_idx:
+                tag_features[i, tag_id_to_idx[tag]] = 1.0
+    
+    feature_list.append(tag_features)
+    feature_names.extend([f"tag_{tid}" for tid in TAG_IDS])
+    logger.info(f"  - Tag features: {len(TAG_IDS)} features")
+
+    # 4. 위치 특징
     position_features = df[["start_x", "start_y", "end_x", "end_y"]].values
     feature_list.append(position_features)
     feature_names.extend(["start_x", "start_y", "end_x", "end_y"])
     logger.info(f"  - Position features: 4 features")
 
-    # 3. 골 관련 특징
+    # 5. 골 관련 특징
     goal_features = df[["goal_distance", "goal_angle"]].values
     feature_list.append(goal_features)
     feature_names.extend(["goal_distance", "goal_angle"])
     logger.info(f"  - Goal features: 2 features")
 
-    # 4. 이동 특징
+    # 6. 이동 특징
     movement_features = df[["distance", "angle"]].values
     feature_list.append(movement_features)
     feature_names.extend(["distance", "angle"])
     logger.info(f"  - Movement features: 2 features")
 
-    # 5. 성공 여부
+    # 7. 성공 여부
     success_features = df[["is_successful"]].values
     feature_list.append(success_features)
     feature_names.extend(["is_successful"])
     logger.info(f"  - Success features: 1 feature")
 
-    # 6. 피리어드 원핫 인코딩
+    # 8. 피리어드 원핫 인코딩
     period_features = pd.get_dummies(df["period"], prefix="period")
     feature_list.append(period_features.values)
     feature_names.extend(period_features.columns.tolist())
