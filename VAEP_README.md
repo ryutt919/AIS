@@ -20,22 +20,53 @@ AIS/
 │   ├── processed/                  # 전처리된 데이터
 │   │   ├── vaep_train_events.csv         # 학습용 (England 제외)
 │   │   └── vaep_eval_events_england.csv  # 평가용 (England)
-│   ├── models/                     # 학습된 모델
-│   │   ├── vaep_model.pt                 # PyTorch 모델 가중치
-│   │   └── vaep_config.json              # 모델 설정
 │   └── vaep_results/               # VAEP 계산 결과
 │       ├── player_match_vaep_england.csv   # 선수-경기별 VAEP
 │       └── player_season_vaep_england.csv  # 선수-시즌별 VAEP
+├── models/                         # 학습된 모델
+│   ├── vaep_model.pt                     # PyTorch 모델 가중치
+│   └── vaep_config.json                  # 모델 설정
+├── logs/                           # 로그 파일
+├── notebooks/                      # Jupyter 노트북
+│   ├── vaep_validation.ipynb             # VAEP 검증 노트북
+│   ├── vaep_performance_analysis.ipynb   # 성능 분석 노트북
+│   └── Soccerdata_scraper.ipynb          # 데이터 스크래퍼
 └── scripts/
     ├── utils.py                    # 공통 유틸리티 함수
     ├── preprocess_wyscout.py       # 데이터 전처리
     ├── train_vaep_model.py         # 모델 학습
-    └── compute_player_vaep.py      # 선수 VAEP 계산
+    ├── compute_player_vaep.py      # 선수 VAEP 계산
+    └── run_pipeline.py             # 전체 파이프라인 실행
 ```
 
 ## 🚀 실행 방법
 
-### 1단계: 데이터 전처리
+### 전체 파이프라인 실행 (권장)
+
+모든 단계를 순차적으로 실행합니다:
+
+```powershell
+cd scripts
+python run_pipeline.py
+```
+
+**디버그 모드 (5개 매치만 처리):**
+
+```powershell
+python run_pipeline.py --debug
+```
+
+**특정 단계 건너뛰기:**
+
+```powershell
+python run_pipeline.py --skip-preprocess   # 전처리 건너뛰기
+python run_pipeline.py --skip-train        # 학습 건너뛰기
+python run_pipeline.py --skip-evaluate     # 평가 건너뛰기
+```
+
+### 개별 단계 실행
+
+#### 1단계: 데이터 전처리
 
 Wyscout 이벤트 데이터를 VAEP 형식으로 전처리합니다.
 
@@ -58,7 +89,7 @@ python preprocess_wyscout.py `
     --log_file preprocess.log
 ```
 
-### 2단계: VAEP 모델 학습
+#### 2단계: VAEP 모델 학습
 
 PyTorch MLP 모델을 학습합니다.
 
@@ -68,15 +99,15 @@ python train_vaep_model.py
 
 **출력:**
 
-- `data/models/vaep_model.pt` - 학습된 모델 가중치
-- `data/models/vaep_config.json` - 모델 설정 (특징, 하이퍼파라미터)
+- `models/vaep_model.pt` - 학습된 모델 가중치
+- `models/vaep_config.json` - 모델 설정 (특징, 하이퍼파라미터)
 
 **옵션:**
 
 ```powershell
 python train_vaep_model.py `
     --input ../data/processed/vaep_train_events.csv `
-    --output_dir ../data/models `
+    --output_dir ../models `
     --horizon 10 `
     --hidden_dims 128 64 `
     --batch_size 512 `
@@ -93,7 +124,7 @@ python train_vaep_model.py `
 - `--epochs`: 학습 에포크 수 (기본: 50)
 - `--lr`: 학습률 (기본: 0.001)
 
-### 3단계: 선수 VAEP 계산
+#### 3단계: 선수 VAEP 계산
 
 학습된 모델로 England 데이터를 평가하고 선수별 VAEP를 계산합니다.
 
@@ -111,8 +142,8 @@ python compute_player_vaep.py
 ```powershell
 python compute_player_vaep.py `
     --input ../data/processed/vaep_eval_events_england.csv `
-    --model_path ../data/models/vaep_model.pt `
-    --config_path ../data/models/vaep_config.json `
+    --model_path ../models/vaep_model.pt `
+    --config_path ../models/vaep_config.json `
     --matches_path ../data/wyscout/matches_England.json `
     --output_dir ../data/vaep_results `
     --log_file compute.log
