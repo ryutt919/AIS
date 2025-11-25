@@ -54,6 +54,12 @@ def parse_args():
         help="매치 정보 파일 경로",
     )
     parser.add_argument(
+        "--players_path",
+        type=str,
+        default="../data/wyscout/players.json",
+        help="선수 정보 파일 경로",
+    )
+    parser.add_argument(
         "--output_dir",
         type=str,
         default="../data/vaep_results",
@@ -192,11 +198,47 @@ def compute_event_vaep(
     return df
 
 
+def load_player_roles(
+    players_path: str, logger: logging.Logger
+) -> Dict[int, str]:
+    """
+    선수 정보에서 포지션(role)을 로드합니다.
+
+    Args:
+        players_path: players.json 파일 경로
+        logger: 로거 객체
+
+    Returns:
+        {playerId: roleCode} 딕셔너리
+    """
+    import json
+    
+    logger.info("Loading player roles...")
+    
+    with open(players_path, 'r', encoding='utf-8') as f:
+        players_data = json.load(f)
+    
+    player_roles = {}
+    for player in players_data:
+        player_id = player.get('wyId')
+        role = player.get('role', {})
+        role_code = role.get('code2', 'UNKNOWN')
+        player_roles[player_id] = role_code
+    
+    logger.info(f"Loaded roles for {len(player_roles)} players")
+    gk_count = sum(1 for role in player_roles.values() if role == 'GK')
+    logger.info(f"  - Goalkeepers: {gk_count}")
+    
+    return player_roles
+
+
 def extract_player_minutes(
     matches_data: List[Dict], logger: logging.Logger
 ) -> pd.DataFrame:
     """
     매치 데이터에서 선수별 출전 시간을 추출합니다.
+    
+    이벤트 데이터의 matchPeriod를 기반으로 실제 출전 시간을 추정합니다.
 
     Args:
         matches_data: 매치 정보 리스트
@@ -249,24 +291,21 @@ def extract_player_minutes(
 
     return df
 
-
-def compute_player_match_vaep(
-    df: pd.DataFrame, player_minutes_df: pd.DataFrame, logger: logging.Logger
-) -> pd.DataFrame:
     """
     선수-경기별 VAEP를 계산합니다.
+    (이벤트는 모두 포함, 골키퍼 선수의 집계만 제외)
 
     Args:
         df: VAEP가 계산된 이벤트 DataFrame
         player_minutes_df: 선수별 출전 시간 DataFrame
+        player_roles: 선수별 포지션 딕셔너리
         logger: 로거 객체
 
     Returns:
         선수-경기별 VAEP DataFrame
     """
     logger.info("Computing player-match VAEP...")
-
-    # 선수-경기별 VAEP 합산
+    # 선수-경기별 VAEP 합산 (이벤트는 모두 포함)
     player_match_vaep = (
         df.groupby(["playerId", "matchId", "teamId"])
         .agg({"vaep": "sum", "id": "count"})  # 이벤트 수
@@ -275,17 +314,30 @@ def compute_player_match_vaep(
 
     player_match_vaep.rename(columns={"id": "num_events"}, inplace=True)
 
-    # 출전 시간 병합
+    # 이벤트 기반으로 실제 출전 시간 추정
+    player_periods = df.groupby(["matchId", "playerId"])["period"].apply(lambda x: x.unique().tolist()).reset_index()
+    player_periods['estimated_minutes'] = player_periods['period'].apply(lambda periods: len(periods) * 45.0)  # 각 피리어드는 45분
+
+    # 출전 시간 병합 (이벤트 기반 추정 우선)
+    player_match_vaep = player_match_vaep.merge(
+        player_periods[["matchId", "playerId", "estimated_minutes"]],
+        on=["matchId", "playerId"],
+        how="left",
+    )
+
+    # 매치 데이터의 출전 시간도 병합 (백업)
     player_match_vaep = player_match_vaep.merge(
         player_minutes_df[["matchId", "playerId", "minutes_played"]],
         on=["matchId", "playerId"],
         how="left",
     )
 
-    # 출전 시간이 없는 경우 90분으로 가정
-    player_match_vaep["minutes_played"] = player_match_vaep["minutes_played"].fillna(
-        90.0
-    )
+    # 이벤트 기반 추정이 있으면 사용, 없으면 매치 데이터 사용, 둘 다 없으면 90분
+    player_match_vaep["minutes_played"] = player_match_vaep["estimated_minutes"].fillna(
+        player_match_vaep["minutes_played"]
+    ).fillna(90.0)
+
+    player_match_vaep.drop(columns=["estimated_minutes"], inplace=True)
 
     # VAEP per 90 minutes 계산
     player_match_vaep["vaep_per90"] = (
@@ -294,10 +346,17 @@ def compute_player_match_vaep(
         / player_match_vaep["minutes_played"].replace(0, 1)
     )
 
-    logger.info(f"Computed VAEP for {len(player_match_vaep)} player-match combinations")
+    # 골키퍼 선수 집계만 제외
+    player_match_vaep['role'] = player_match_vaep['playerId'].map(player_roles)
+    n_before = len(player_match_vaep)
+    player_match_vaep = player_match_vaep[player_match_vaep['role'] != 'GK'].copy()
+    n_after = len(player_match_vaep)
+    logger.info(f"Excluded {n_before-n_after} goalkeeper player-match rows from aggregation.")
+    player_match_vaep.drop(columns=['role'], inplace=True)
+
+    logger.info(f"Computed VAEP for {len(player_match_vaep)} player-match combinations (goalkeeper players excluded)")
 
     return player_match_vaep
-
 
 def compute_player_season_vaep(
     player_match_vaep: pd.DataFrame, logger: logging.Logger
@@ -380,12 +439,14 @@ def main():
     model_path = os.path.abspath(os.path.join(script_dir, args.model_path))
     config_path = os.path.abspath(os.path.join(script_dir, args.config_path))
     matches_path = os.path.abspath(os.path.join(script_dir, args.matches_path))
+    players_path = os.path.abspath(os.path.join(script_dir, args.players_path))
     output_dir = os.path.abspath(os.path.join(script_dir, args.output_dir))
 
     logger.info(f"Input: {input_path}")
     logger.info(f"Model: {model_path}")
     logger.info(f"Config: {config_path}")
     logger.info(f"Matches: {matches_path}")
+    logger.info(f"Players: {players_path}")
     logger.info(f"Output directory: {output_dir}")
 
     ensure_dir(output_dir)
@@ -417,6 +478,13 @@ def main():
         logger.info(f"Loaded {len(matches_data)} matches")
 
         player_minutes_df = extract_player_minutes(matches_data, logger)
+        
+        # 선수 role 로드
+        logger.info("\n" + "=" * 80)
+        logger.info("Loading player roles...")
+        logger.info("=" * 80)
+        
+        player_roles = load_player_roles(players_path, logger)
 
         # State 특징 생성
         logger.info("\n" + "=" * 80)
@@ -448,7 +516,7 @@ def main():
         logger.info("=" * 80)
 
         player_match_vaep = compute_player_match_vaep(
-            df_with_vaep, player_minutes_df, logger
+            df_with_vaep, player_minutes_df, player_roles, logger
         )
 
         # 저장
