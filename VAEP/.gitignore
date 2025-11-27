@@ -24,3 +24,6 @@ logs/
 # IDE
 .vscode/
 .idea/
+
+# External repositories
+statsbomb/
