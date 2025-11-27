@@ -13,20 +13,21 @@ preprocessing:
   output_train: vaep_train_events.csv
   output_eval: vaep_eval_events_england.csv
 
+
 # 모델 학습 설정
 training:
   # 모델 아키텍처
-  hidden_dims: [128, 64]
+  hidden_dims: [256, 128]
   dropout: 0.3
 
   # 학습 하이퍼파라미터
-  epochs: 50
-  batch_size: 512
+  epochs: 30
+  batch_size: 2048
   learning_rate: 0.001
   val_ratio: 0.2
 
   # VAEP 설정
-  horizon: 10 # 라벨링 horizon (이벤트 수)
+  horizon: 5 # 라벨링 horizon (이벤트 수)
 
   # 기타
   random_seed: 42
@@ -34,7 +35,7 @@ training:
 
 # 선수 VAEP 계산 설정
 evaluation:
-  batch_size: 1024
+  batch_size: 2048
   matches_file: matches_England.json
 
 # 로깅 설정

@@ -1,0 +1,44 @@
+[
+  {
+    "run_id": 1,
+    "version": "grid_20251125_161645_001",
+    "params": {
+      "learning_rate": 0.0001,
+      "batch_size": 8192,
+      "hidden_dims": [
+        256,
+        128,
+        64
+      ],
+      "horizon": 10,
+      "epochs": 35,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.136295896424697,
+    "best_epoch": 32,
+    "final_train_loss": 0.1483879120910869,
+    "final_val_loss": 0.13629907908347938
+  },
+  {
+    "run_id": 2,
+    "version": "grid_20251125_161645_002",
+    "params": {
+      "learning_rate": 0.0001,
+      "batch_size": 8192,
+      "hidden_dims": [
+        384,
+        192,
+        96
+      ],
+      "horizon": 20,
+      "epochs": 35,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.2542178513912054,
+    "best_epoch": 35,
+    "final_train_loss": 0.27109695112004,
+    "final_val_loss": 0.2542178513912054
+  }
+]

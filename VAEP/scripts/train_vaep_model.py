@@ -52,10 +52,19 @@ def parse_args():
         help="전처리된 학습 데이터 경로",
     )
     parser.add_argument(
-        "--output_dir", type=str, default=None, help="모델 저장 디렉토리"
+        "--output_dir", type=str, default="../models", help="모델 저장 디렉토리 (버전 폴더가 자동 생성됨)"
+    )
+    parser.add_argument(
+        "--version", type=str, default=None, help="버전 이름 (기본값: 자동 생성)"
     )
     parser.add_argument(
         "--horizon", type=int, default=None, help="라벨링 horizon (이벤트 수)"
+    )
+    parser.add_argument(
+        "--precomputed_dir",
+        type=str,
+        default=None,
+        help="전처리된 horizon 데이터 디렉토리 (속도 향상)",
     )
     parser.add_argument(
         "--hidden_dims",
@@ -65,6 +74,9 @@ def parse_args():
         help="MLP 히든 레이어 차원",
     )
     parser.add_argument("--batch_size", type=int, default=None, help="배치 크기")
+    parser.add_argument("--num_workers", type=int, default=8, help="DataLoader worker 수 (GPU 최적화)")
+    parser.add_argument("--use_amp", action="store_true", help="Mixed Precision Training 사용")
+    parser.add_argument("--scheduler", type=str, default="none", choices=["none", "step", "cosine"], help="학습률 스케줄러 타입")
     parser.add_argument("--epochs", type=int, default=None, help="학습 에포크 수")
     parser.add_argument("--lr", type=float, default=None, help="학습률")
     parser.add_argument("--val_ratio", type=float, default=None, help="검증 세트 비율")
@@ -88,7 +100,14 @@ def parse_args():
         args.input
         or f"../{paths_config['processed_dir']}/{config['preprocessing']['output_train']}"
     )
-    args.output_dir = args.output_dir or f"../{paths_config['models_dir']}"
+    
+    # 버전 폴더 생성
+    from datetime import datetime
+    if not hasattr(args, 'version') or args.version is None:
+        args.version = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    base_output_dir = args.output_dir or f"../{paths_config['models_dir']}"
+    args.output_dir = os.path.join(base_output_dir, args.version)
     args.horizon = args.horizon or train_config["horizon"]
     args.hidden_dims = args.hidden_dims or train_config["hidden_dims"]
     args.batch_size = args.batch_size or train_config["batch_size"]
@@ -286,11 +305,18 @@ def create_state_features(
     feature_names.extend(["is_successful"])
     logger.info(f"  - Success features: 1 feature")
 
-    # 8. 피리어드 원핫 인코딩
-    period_features = pd.get_dummies(df["period"], prefix="period")
-    feature_list.append(period_features.values)
-    feature_names.extend(period_features.columns.tolist())
-    logger.info(f"  - Period features: {period_features.shape[1]} features")
+    # 8. 피리어드 원핫 인코딩 (고정된 5개 period 사용)
+    PERIODS = ['1H', '2H', 'E1H', 'E2H', 'P']
+    period_features = np.zeros((len(df), len(PERIODS)), dtype=np.float32)
+    period_to_idx = {p: idx for idx, p in enumerate(PERIODS)}
+    
+    for i, period in enumerate(df["period"]):
+        if period in period_to_idx:
+            period_features[i, period_to_idx[period]] = 1.0
+    
+    feature_list.append(period_features)
+    feature_names.extend([f"period_{p}" for p in PERIODS])
+    logger.info(f"  - Period features: {len(PERIODS)} features")
 
     # 모든 특징 결합
     features = np.concatenate(feature_list, axis=1).astype(np.float32)
@@ -324,7 +350,7 @@ def create_labels(
     labels_concede = np.zeros(len(df), dtype=np.float32)
 
     # 매치별로 처리
-    for match_id in df["matchId"].unique():
+    for match_id in tqdm(df["matchId"].unique(),desc='Processing by match..'):
         match_mask = df["matchId"] == match_id
         match_df = df[match_mask].reset_index(drop=True)
         match_indices = df[match_mask].index
@@ -373,6 +399,7 @@ def train_epoch(
     optimizer: optim.Optimizer,
     device: torch.device,
     logger: logging.Logger,
+    scaler=None,
 ) -> Tuple[float, float, float, float]:
     """
     한 에포크 학습을 수행합니다.
@@ -384,6 +411,7 @@ def train_epoch(
         optimizer: 옵티마이저
         device: 디바이스
         logger: 로거
+        scaler: AMP GradScaler (optional)
 
     Returns:
         (total_loss, score_acc, concede_acc, avg_loss)
@@ -394,23 +422,36 @@ def train_epoch(
     concede_correct = 0
     total_samples = 0
 
-    for batch_idx, (features, labels_score, labels_concede) in enumerate(dataloader):
-        features = features.to(device)
-        labels_score = labels_score.to(device)
-        labels_concede = labels_concede.to(device)
+    for batch_idx, (features, labels_score, labels_concede) in enumerate(tqdm(dataloader, desc='Training', leave=False)):
+        features = features.to(device, non_blocking=True)
+        labels_score = labels_score.to(device, non_blocking=True)
+        labels_concede = labels_concede.to(device, non_blocking=True)
 
-        # 순전파
-        score_logits, concede_logits = model(features)
-
-        # 손실 계산 (VAEP 논문: Binary Cross-Entropy)
-        loss_score = criterion(score_logits, labels_score)
-        loss_concede = criterion(concede_logits, labels_concede)
-        loss = loss_score + loss_concede
-
-        # 역전파
         optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        
+        # Mixed Precision Training
+        if scaler is not None:
+            with torch.cuda.amp.autocast():
+                score_logits, concede_logits = model(features)
+                loss_score = criterion(score_logits, labels_score)
+                loss_concede = criterion(concede_logits, labels_concede)
+                loss = loss_score + loss_concede
+            
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            # 순전파
+            score_logits, concede_logits = model(features)
+
+            # 손실 계산 (VAEP 논문: Binary Cross-Entropy)
+            loss_score = criterion(score_logits, labels_score)
+            loss_concede = criterion(concede_logits, labels_concede)
+            loss = loss_score + loss_concede
+
+            # 역전파
+            loss.backward()
+            optimizer.step()
 
         # 통계
         total_loss += loss.item()
@@ -452,7 +493,7 @@ def validate(
     total_samples = 0
 
     with torch.no_grad():
-        for features, labels_score, labels_concede in dataloader:
+        for features, labels_score, labels_concede in tqdm(dataloader, desc='Validating', leave=False):
             features = features.to(device)
             labels_score = labels_score.to(device)
             labels_concede = labels_concede.to(device)
@@ -486,11 +527,22 @@ def main():
     """메인 실행 함수."""
     args, config = parse_args()
 
-    # 로거 설정
-    logger = setup_logger("train_vaep", args.log_file)
+    # 출력 디렉토리 생성 (로거 설정 전에)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_dir = os.path.abspath(os.path.join(script_dir, args.output_dir))
+    ensure_dir(output_dir)
+
+    # 로거 설정 (버전 폴더의 로그 파일)
+    if args.log_file and args.log_file != "../logs/train_vaep_model.log":
+        log_file = args.log_file
+    else:
+        log_file = os.path.join(output_dir, "training.log")
+    
+    logger = setup_logger("train_vaep", log_file)
     logger.info("=" * 80)
     logger.info("VAEP Model Training")
     logger.info("=" * 80)
+    logger.info(f"Version: {args.version}")
 
     # 랜덤 시드 설정
     np.random.seed(args.random_seed)
@@ -503,9 +555,7 @@ def main():
     logger.info(f"Using device: {device}")
 
     # 절대 경로 계산
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     input_path = os.path.abspath(os.path.join(script_dir, args.input))
-    output_dir = os.path.abspath(os.path.join(script_dir, args.output_dir))
 
     logger.info(f"Input: {input_path}")
     logger.info(f"Output directory: {output_dir}")
@@ -514,8 +564,6 @@ def main():
     logger.info(f"Batch size: {args.batch_size}")
     logger.info(f"Epochs: {args.epochs}")
     logger.info(f"Learning rate: {args.lr}")
-
-    ensure_dir(output_dir)
 
     try:
         # 데이터 로드
@@ -536,12 +584,31 @@ def main():
 
         features, feature_names = create_state_features(df, logger)
 
-        # 라벨 생성
+        # 라벨 생성 또는 로드 (캐싱)
         logger.info("\n" + "=" * 80)
-        logger.info("Creating labels...")
+        logger.info("Creating or loading labels...")
         logger.info("=" * 80)
-
-        labels_score, labels_concede = create_labels(df, args.horizon, logger)
+        
+        # 라벨 캐시 파일 경로
+        labels_cache_dir = os.path.join(script_dir, "../data/processed")
+        labels_cache_path = os.path.join(labels_cache_dir, f"labels_h{args.horizon}.npz")
+        
+        if os.path.exists(labels_cache_path):
+            logger.info(f"Loading cached labels from: {labels_cache_path}")
+            labels_data = np.load(labels_cache_path)
+            labels_score = labels_data['labels_score']
+            labels_concede = labels_data['labels_concede']
+            logger.info(f"  - Loaded {len(labels_score)} labels from cache")
+            logger.info(f"  - Scoring events: {int(labels_score.sum())} ({labels_score.sum()/len(labels_score)*100:.2f}%)")
+            logger.info(f"  - Conceding events: {int(labels_concede.sum())} ({labels_concede.sum()/len(labels_concede)*100:.2f}%)")
+        else:
+            logger.info("No cached labels found. Computing labels...")
+            labels_score, labels_concede = create_labels(df, args.horizon, logger)
+            
+            # 라벨 저장
+            logger.info(f"Saving labels to cache: {labels_cache_path}")
+            np.savez_compressed(labels_cache_path, labels_score=labels_score, labels_concede=labels_concede)
+            logger.info("Labels cached successfully")
 
         # Train/Val 분할
         logger.info("\n" + "=" * 80)
@@ -571,10 +638,10 @@ def main():
         val_dataset = VAEPDataset(val_features, val_labels_score, val_labels_concede)
 
         train_loader = DataLoader(
-            train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0
+            train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True
         )
         val_loader = DataLoader(
-            val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0
+            val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True
         )
 
         # 모델 생성
@@ -595,24 +662,61 @@ def main():
         # 손실 함수 및 옵티마이저
         criterion = nn.BCEWithLogitsLoss()
         optimizer = optim.Adam(model.parameters(), lr=args.lr)
+        
+        # 러닝 스케줄러 설정
+        scheduler = None
+        if args.scheduler == "step":
+            scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+            logger.info("Using StepLR scheduler (step_size=10, gamma=0.5)")
+        elif args.scheduler == "cosine":
+            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+            logger.info(f"Using CosineAnnealingLR scheduler (T_max={args.epochs})")
+        
+        # Mixed Precision Training
+        scaler = torch.cuda.amp.GradScaler() if args.use_amp else None
+        if args.use_amp:
+            logger.info("Using Automatic Mixed Precision (AMP) training")
 
         # 학습
         logger.info("\n" + "=" * 80)
         logger.info("Training...")
         logger.info("=" * 80)
+        logger.info(f"Num workers: {args.num_workers}")
+        logger.info(f"Mixed Precision: {args.use_amp}")
 
         best_val_loss = float("inf")
+        best_epoch = 0
+        
+        # 학습 이력 저장
+        history = {
+            'epoch': [],
+            'train_loss': [],
+            'val_loss': [],
+            'train_score_acc': [],
+            'train_concede_acc': [],
+            'val_score_acc': [],
+            'val_concede_acc': []
+        }
 
         for epoch in range(args.epochs):
             # 학습
             train_loss, train_score_acc, train_concede_acc, avg_train_loss = (
-                train_epoch(model, train_loader, criterion, optimizer, device, logger)
+                train_epoch(model, train_loader, criterion, optimizer, device, logger, scaler)
             )
 
             # 검증
             val_loss, val_score_acc, val_concede_acc = validate(
                 model, val_loader, criterion, device
             )
+            
+            # 이력 저장
+            history['epoch'].append(epoch + 1)
+            history['train_loss'].append(avg_train_loss)
+            history['val_loss'].append(val_loss)
+            history['train_score_acc'].append(train_score_acc)
+            history['train_concede_acc'].append(train_concede_acc)
+            history['val_score_acc'].append(val_score_acc)
+            history['val_concede_acc'].append(val_concede_acc)
 
             logger.info(
                 f"Epoch [{epoch+1}/{args.epochs}] "
@@ -622,24 +726,38 @@ def main():
                 f"(Score Acc: {val_score_acc:.4f}, Concede Acc: {val_concede_acc:.4f})"
             )
 
+            # 에포별 모델 저장
+            epoch_model_path = os.path.join(output_dir, f"vaep_model_epoch_{epoch+1:03d}.pt")
+            torch.save(model.state_dict(), epoch_model_path)
+            
             # 최고 모델 저장
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
-                model_path = os.path.join(output_dir, "vaep_model.pt")
+                best_epoch = epoch + 1
+                model_path = os.path.join(output_dir, "vaep_model_best.pt")
                 torch.save(model.state_dict(), model_path)
                 logger.info(f"  -> Best model saved (val_loss: {val_loss:.4f})")
+            
+            # 스케줄러 스텝
+            if scheduler is not None:
+                scheduler.step()
+                logger.info(f"  Learning rate: {optimizer.param_groups[0]['lr']:.6f}")
 
-        # 설정 저장
+        # 설정 및 이력 저장
         logger.info("\n" + "=" * 80)
-        logger.info("Saving configuration...")
+        logger.info("Saving configuration and history...")
         logger.info("=" * 80)
 
         config = {
+            "version": args.version,
             "input_dim": input_dim,
             "hidden_dims": args.hidden_dims,
             "horizon": args.horizon,
             "feature_names": feature_names,
             "best_val_loss": best_val_loss,
+            "best_epoch": best_epoch,
+            "num_train_samples": len(train_dataset),
+            "num_val_samples": len(val_dataset),
         }
 
         config_path = os.path.join(output_dir, "vaep_config.json")
@@ -647,11 +765,19 @@ def main():
             json.dump(config, f, indent=2, ensure_ascii=False)
 
         logger.info(f"Configuration saved to: {config_path}")
+        
+        # 학습 이력 저장
+        history_path = os.path.join(output_dir, "training_history.json")
+        with open(history_path, "w", encoding="utf-8") as f:
+            json.dump(history, f, indent=2, ensure_ascii=False)
+        
+        logger.info(f"Training history saved to: {history_path}")
 
         logger.info("\n" + "=" * 80)
         logger.info("Training completed successfully!")
         logger.info("=" * 80)
         logger.info(f"Best validation loss: {best_val_loss:.4f}")
+        logger.info(f"Best epoch: {best_epoch}")
 
     except Exception as e:
         logger.error(f"Error during training: {str(e)}", exc_info=True)

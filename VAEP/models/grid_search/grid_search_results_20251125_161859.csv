@@ -1,0 +1,2 @@
+run_id,version,params,status,best_val_loss,best_epoch,final_train_loss,final_val_loss
+1,grid_20251125_161859_001,"{'learning_rate': 0.0005, 'batch_size': 4096, 'hidden_dims': [256, 128], 'horizon': 20, 'epochs': 35, 'scheduler': 'step'}",success,0.25267432179561883,5,0.2699905070961107,0.25267432179561883

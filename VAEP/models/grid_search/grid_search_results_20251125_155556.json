@@ -1,0 +1,402 @@
+[
+  {
+    "run_id": 1,
+    "version": "grid_20251125_155556_001",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 10,
+      "epochs": 20,
+      "scheduler": "step"
+    },
+    "status": "success",
+    "best_val_loss": 0.13206201688846725,
+    "best_epoch": 19,
+    "final_train_loss": 0.14119495740828847,
+    "final_val_loss": 0.13217200014870686
+  },
+  {
+    "run_id": 2,
+    "version": "grid_20251125_155556_002",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 10,
+      "epochs": 20,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.13226556891017388,
+    "best_epoch": 19,
+    "final_train_loss": 0.1417390245618253,
+    "final_val_loss": 0.13226618374976898
+  },
+  {
+    "run_id": 3,
+    "version": "grid_20251125_155556_003",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 10,
+      "epochs": 35,
+      "scheduler": "step"
+    },
+    "status": "success",
+    "best_val_loss": 0.1317813067773089,
+    "best_epoch": 33,
+    "final_train_loss": 0.14028951141071178,
+    "final_val_loss": 0.13187247086388823
+  },
+  {
+    "run_id": 4,
+    "version": "grid_20251125_155556_004",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 10,
+      "epochs": 35,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.1317516477408924,
+    "best_epoch": 30,
+    "final_train_loss": 0.14015760792157408,
+    "final_val_loss": 0.1317626881242842
+  },
+  {
+    "run_id": 5,
+    "version": "grid_20251125_155556_005",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 10,
+      "epochs": 40,
+      "scheduler": "step"
+    },
+    "status": "success",
+    "best_val_loss": 0.13174057332255265,
+    "best_epoch": 40,
+    "final_train_loss": 0.14023164199663357,
+    "final_val_loss": 0.13174057332255265
+  },
+  {
+    "run_id": 6,
+    "version": "grid_20251125_155556_006",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 10,
+      "epochs": 40,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.13167320738332744,
+    "best_epoch": 33,
+    "final_train_loss": 0.13995511514100822,
+    "final_val_loss": 0.13168105582347872
+  },
+  {
+    "run_id": 7,
+    "version": "grid_20251125_155556_007",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 15,
+      "epochs": 20,
+      "scheduler": "step"
+    },
+    "status": "success",
+    "best_val_loss": 0.19487766228645229,
+    "best_epoch": 18,
+    "final_train_loss": 0.2069388932329598,
+    "final_val_loss": 0.1949042136770046
+  },
+  {
+    "run_id": 8,
+    "version": "grid_20251125_155556_008",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 15,
+      "epochs": 20,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.19482545224145228,
+    "best_epoch": 18,
+    "final_train_loss": 0.20760935427751046,
+    "final_val_loss": 0.19483264584949508
+  },
+  {
+    "run_id": 9,
+    "version": "grid_20251125_155556_009",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 15,
+      "epochs": 35,
+      "scheduler": "step"
+    },
+    "status": "success",
+    "best_val_loss": 0.19447667538713853,
+    "best_epoch": 26,
+    "final_train_loss": 0.2062033190663937,
+    "final_val_loss": 0.19451383453456808
+  },
+  {
+    "run_id": 10,
+    "version": "grid_20251125_155556_010",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 15,
+      "epochs": 35,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.19440927540571773,
+    "best_epoch": 30,
+    "final_train_loss": 0.2060587085277985,
+    "final_val_loss": 0.19447347995778003
+  },
+  {
+    "run_id": 11,
+    "version": "grid_20251125_155556_011",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 15,
+      "epochs": 40,
+      "scheduler": "step"
+    },
+    "status": "success",
+    "best_val_loss": 0.19446204109878393,
+    "best_epoch": 40,
+    "final_train_loss": 0.20605274428308537,
+    "final_val_loss": 0.19446204109878393
+  },
+  {
+    "run_id": 12,
+    "version": "grid_20251125_155556_012",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 15,
+      "epochs": 40,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.1943708732434284,
+    "best_epoch": 30,
+    "final_train_loss": 0.20593838979771237,
+    "final_val_loss": 0.19443935537094736
+  },
+  {
+    "run_id": 13,
+    "version": "grid_20251125_155556_013",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 20,
+      "epochs": 20,
+      "scheduler": "step"
+    },
+    "status": "success",
+    "best_val_loss": 0.2510151012079493,
+    "best_epoch": 19,
+    "final_train_loss": 0.2656760227041376,
+    "final_val_loss": 0.2511046990056446
+  },
+  {
+    "run_id": 14,
+    "version": "grid_20251125_155556_014",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 20,
+      "epochs": 20,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.2509307547939891,
+    "best_epoch": 18,
+    "final_train_loss": 0.2662412891111308,
+    "final_val_loss": 0.250965031030577
+  },
+  {
+    "run_id": 15,
+    "version": "grid_20251125_155556_015",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 20,
+      "epochs": 35,
+      "scheduler": "step"
+    },
+    "status": "success",
+    "best_val_loss": 0.25057233194548795,
+    "best_epoch": 30,
+    "final_train_loss": 0.2648697956561339,
+    "final_val_loss": 0.2506388322765493
+  },
+  {
+    "run_id": 16,
+    "version": "grid_20251125_155556_016",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 20,
+      "epochs": 35,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.2505195016469009,
+    "best_epoch": 30,
+    "final_train_loss": 0.2647397625850717,
+    "final_val_loss": 0.25058252771714784
+  },
+  {
+    "run_id": 17,
+    "version": "grid_20251125_155556_017",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 20,
+      "epochs": 40,
+      "scheduler": "step"
+    },
+    "status": "success",
+    "best_val_loss": 0.25053263277337245,
+    "best_epoch": 40,
+    "final_train_loss": 0.2647896886252841,
+    "final_val_loss": 0.25053263277337245
+  },
+  {
+    "run_id": 18,
+    "version": "grid_20251125_155556_018",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "horizon": 20,
+      "epochs": 40,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.2503954989813877,
+    "best_epoch": 30,
+    "final_train_loss": 0.2644604505163378,
+    "final_val_loss": 0.25049528408549177
+  },
+  {
+    "run_id": 19,
+    "version": "grid_20251125_155556_019",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        256,
+        128
+      ],
+      "horizon": 5,
+      "epochs": 20,
+      "scheduler": "step"
+    },
+    "status": "success",
+    "best_val_loss": 0.05937576962903084,
+    "best_epoch": 19,
+    "final_train_loss": 0.06387013743650773,
+    "final_val_loss": 0.05971159409651902
+  },
+  {
+    "run_id": 20,
+    "version": "grid_20251125_155556_020",
+    "params": {
+      "learning_rate": 0.001,
+      "batch_size": 2048,
+      "hidden_dims": [
+        256,
+        128
+      ],
+      "horizon": 5,
+      "epochs": 20,
+      "scheduler": "cosine"
+    },
+    "status": "success",
+    "best_val_loss": 0.0593037317300411,
+    "best_epoch": 19,
+    "final_train_loss": 0.06372174818614533,
+    "final_val_loss": 0.05930538621915917
+  }
+]

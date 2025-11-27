@@ -1,0 +1,37 @@
+[
+  {
+    "learning_rate": 0.0005,
+    "batch_size": 4096,
+    "hidden_dims": [
+      256,
+      128
+    ],
+    "horizon": 20,
+    "epochs": 35,
+    "scheduler": "step"
+  },
+  {
+    "learning_rate": 0.0001,
+    "batch_size": 8192,
+    "hidden_dims": [
+      256,
+      128,
+      64
+    ],
+    "horizon": 10,
+    "epochs": 35,
+    "scheduler": "cosine"
+  },
+  {
+    "learning_rate": 0.0001,
+    "batch_size": 8192,
+    "hidden_dims": [
+      384,
+      192,
+      96
+    ],
+    "horizon": 20,
+    "epochs": 35,
+    "scheduler": "cosine"
+  }
+]

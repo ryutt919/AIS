@@ -1,0 +1,26 @@
+# Data files
+data/**/*
+!data/processed/
+!data/processed/.gitkeep
+
+# Models - exclude everything except results folders
+models/**/*
+!models/**/
+!models/*/results/
+!models/*/results/**
+!models/grid_search/
+!models/grid_search/**
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/

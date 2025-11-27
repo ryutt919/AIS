@@ -36,16 +36,22 @@ def parse_args():
         help="평가할 이벤트 데이터 경로",
     )
     parser.add_argument(
+        "--model_version",
+        type=str,
+        default="latest",
+        help="모델 버전 (latest: 최신 버전의 best 모델 자동 선택)",
+    )
+    parser.add_argument(
         "--model_path",
         type=str,
-        default="../data/models/vaep_model.pt",
-        help="학습된 모델 경로",
+        default=None,
+        help="학습된 모델 경로 (직접 지정 시)",
     )
     parser.add_argument(
         "--config_path",
         type=str,
-        default="../data/models/vaep_config.json",
-        help="모델 설정 파일 경로",
+        default=None,
+        help="모델 설정 파일 경로 (직접 지정 시)",
     )
     parser.add_argument(
         "--matches_path",
@@ -62,10 +68,16 @@ def parse_args():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="../data/vaep_results",
-        help="결과 저장 디렉토리",
+        default=None,
+        help="결과 저장 디렉토리 (기본: 모델 버전 폴더 내 results/)",
     )
     parser.add_argument("--log_file", type=str, default=None, help="로그 파일 경로")
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=4096,
+        help="배치 크기 (GPU 최적화)",
+    )
     return parser.parse_args()
 
 
@@ -104,7 +116,7 @@ def load_model(
 
 
 def compute_state_values(
-    model: VAEPModel, features: np.ndarray, device: torch.device, batch_size: int = 1024
+    model: VAEPModel, features: np.ndarray, device: torch.device, batch_size: int = 4096
 ) -> np.ndarray:
     """
     모든 이벤트의 state value를 계산합니다.
@@ -125,7 +137,7 @@ def compute_state_values(
     values = []
 
     with torch.no_grad():
-        for i in range(0, len(features), batch_size):
+        for i in tqdm(range(0, len(features), batch_size), desc='Computing state values'):
             batch_features = torch.FloatTensor(features[i : i + batch_size]).to(device)
 
             # 모델 예측
@@ -172,7 +184,7 @@ def compute_event_vaep(
     df["vaep"] = 0.0
 
     # 매치별로 처리
-    for match_id in df["matchId"].unique():
+    for match_id in tqdm(df["matchId"].unique(), desc='Computing VAEP per match'):
         match_mask = df["matchId"] == match_id
         match_indices = df[match_mask].index
 
@@ -291,6 +303,13 @@ def extract_player_minutes(
 
     return df
 
+
+def compute_player_match_vaep(
+    df: pd.DataFrame, 
+    player_minutes_df: pd.DataFrame, 
+    player_roles: Dict[int, str],
+    logger: logging.Logger
+) -> pd.DataFrame:
     """
     선수-경기별 VAEP를 계산합니다.
     (이벤트는 모두 포함, 골키퍼 선수의 집계만 제외)
@@ -346,15 +365,12 @@ def extract_player_minutes(
         / player_match_vaep["minutes_played"].replace(0, 1)
     )
 
-    # 골키퍼 선수 집계만 제외
+    # 골키퍼도 포함 (role 정보 추가)
     player_match_vaep['role'] = player_match_vaep['playerId'].map(player_roles)
-    n_before = len(player_match_vaep)
-    player_match_vaep = player_match_vaep[player_match_vaep['role'] != 'GK'].copy()
-    n_after = len(player_match_vaep)
-    logger.info(f"Excluded {n_before-n_after} goalkeeper player-match rows from aggregation.")
-    player_match_vaep.drop(columns=['role'], inplace=True)
+    gk_count = (player_match_vaep['role'] == 'GK').sum()
+    logger.info(f"Including all players: {gk_count} goalkeeper player-match combinations included")
 
-    logger.info(f"Computed VAEP for {len(player_match_vaep)} player-match combinations (goalkeeper players excluded)")
+    logger.info(f"Computed VAEP for {len(player_match_vaep)} player-match combinations (including goalkeepers)")
 
     return player_match_vaep
 
@@ -373,7 +389,7 @@ def compute_player_season_vaep(
     """
     logger.info("Computing player season VAEP...")
 
-    # 선수별 집계
+    # 선수별 집계 (role 정보도 포함)
     player_season_vaep = (
         player_match_vaep.groupby("playerId")
         .agg(
@@ -383,6 +399,7 @@ def compute_player_season_vaep(
                 "vaep_per90": "mean",  # 경기당 평균 VAEP per 90
                 "minutes_played": "sum",  # 총 출전 시간
                 "num_events": "sum",  # 총 이벤트 수
+                "role": "first",  # 선수 역할 (첫 번째 값 사용)
             }
         )
         .reset_index()
@@ -436,11 +453,40 @@ def main():
     # 절대 경로 계산
     script_dir = os.path.dirname(os.path.abspath(__file__))
     input_path = os.path.abspath(os.path.join(script_dir, args.input))
-    model_path = os.path.abspath(os.path.join(script_dir, args.model_path))
-    config_path = os.path.abspath(os.path.join(script_dir, args.config_path))
     matches_path = os.path.abspath(os.path.join(script_dir, args.matches_path))
     players_path = os.path.abspath(os.path.join(script_dir, args.players_path))
-    output_dir = os.path.abspath(os.path.join(script_dir, args.output_dir))
+    
+    # 모델 경로 자동 결정
+    if args.model_path is None or args.config_path is None:
+        models_dir = os.path.abspath(os.path.join(script_dir, "../models"))
+        
+        if args.model_version == "latest":
+            # 최신 버전 찾기
+            versions = sorted([d for d in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, d))], reverse=True)
+            if versions:
+                latest_version = versions[0]
+                version_dir = os.path.join(models_dir, latest_version)
+                model_path = os.path.join(version_dir, "vaep_model_best.pt")
+                config_path = os.path.join(version_dir, "vaep_config.json")
+                logger.info(f"Using latest model version: {latest_version}")
+            else:
+                logger.error("No model versions found!")
+                sys.exit(1)
+        else:
+            # 지정된 버전 사용
+            version_dir = os.path.join(models_dir, args.model_version)
+            model_path = os.path.join(version_dir, "vaep_model_best.pt")
+            config_path = os.path.join(version_dir, "vaep_config.json")
+    else:
+        model_path = os.path.abspath(os.path.join(script_dir, args.model_path))
+        config_path = os.path.abspath(os.path.join(script_dir, args.config_path))
+        version_dir = os.path.dirname(model_path)
+    
+    # output_dir 자동 설정 (버전 폴더 내 results/)
+    if args.output_dir is None:
+        output_dir = os.path.join(version_dir, "results")
+    else:
+        output_dir = os.path.abspath(os.path.join(script_dir, args.output_dir))
 
     logger.info(f"Input: {input_path}")
     logger.info(f"Model: {model_path}")
@@ -455,14 +501,14 @@ def main():
         # 모델 로드
         logger.info("\n" + "=" * 80)
         logger.info("Loading model...")
-        logger.info("=" * 80)
+        logger.info("\n" +"=" * 80)
 
         model, config = load_model(model_path, config_path, device, logger)
 
         # 데이터 로드
         logger.info("\n" + "=" * 80)
         logger.info("Loading evaluation data...")
-        logger.info("=" * 80)
+        logger.info("\n" +"=" * 80)
 
         df = pd.read_csv(input_path)
         logger.info(f"Loaded {len(df)} events")
@@ -472,7 +518,7 @@ def main():
         # 매치 정보 로드
         logger.info("\n" + "=" * 80)
         logger.info("Loading match information...")
-        logger.info("=" * 80)
+        logger.info("\n" +"=" * 80)
 
         matches_data = load_json(matches_path)
         logger.info(f"Loaded {len(matches_data)} matches")
@@ -482,23 +528,23 @@ def main():
         # 선수 role 로드
         logger.info("\n" + "=" * 80)
         logger.info("Loading player roles...")
-        logger.info("=" * 80)
+        logger.info("\n" +"=" * 80)
         
         player_roles = load_player_roles(players_path, logger)
 
         # State 특징 생성
         logger.info("\n" + "=" * 80)
         logger.info("Creating state features...")
-        logger.info("=" * 80)
+        logger.info("\n" +"=" * 80)
 
         features, feature_names = create_state_features(df, logger)
 
         # State values 계산
         logger.info("\n" + "=" * 80)
         logger.info("Computing state values...")
-        logger.info("=" * 80)
+        logger.info("\n" +"=" * 80)
 
-        state_values = compute_state_values(model, features, device)
+        state_values = compute_state_values(model, features, device, batch_size=args.batch_size)
         logger.info(f"Computed state values for {len(state_values)} events")
         logger.info(f"  - Mean: {state_values.mean():.6f}")
         logger.info(f"  - Std: {state_values.std():.6f}")
@@ -506,14 +552,14 @@ def main():
         # 이벤트별 VAEP 계산
         logger.info("\n" + "=" * 80)
         logger.info("Computing event VAEP...")
-        logger.info("=" * 80)
+        logger.info("\n" +"=" * 80)
 
         df_with_vaep = compute_event_vaep(df, state_values, logger)
 
         # 선수-경기별 VAEP 계산
         logger.info("\n" + "=" * 80)
         logger.info("Computing player-match VAEP...")
-        logger.info("=" * 80)
+        logger.info("\n" +"=" * 80)
 
         player_match_vaep = compute_player_match_vaep(
             df_with_vaep, player_minutes_df, player_roles, logger
@@ -527,7 +573,7 @@ def main():
         # 선수별 시즌 VAEP 계산
         logger.info("\n" + "=" * 80)
         logger.info("Computing player season VAEP...")
-        logger.info("=" * 80)
+        logger.info("\n" +"=" * 80)
 
         player_season_vaep = compute_player_season_vaep(player_match_vaep, logger)
 
@@ -540,7 +586,7 @@ def main():
 
         logger.info("\n" + "=" * 80)
         logger.info("VAEP computation completed successfully!")
-        logger.info("=" * 80)
+        logger.info("\n" +"=" * 80)
         logger.info(f"\nOutput files:")
         logger.info(f"  1. {player_match_output}")
         logger.info(f"  2. {player_season_output}")

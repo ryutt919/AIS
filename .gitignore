@@ -1,3 +1,10 @@
+# Data files
 /data/*
 !data/player_match_stats/
 data.zip
+
+# Models - exclude everything except results folders
+models/**/*
+!models/**/
+!models/*/results/
+!models/*/results/**
