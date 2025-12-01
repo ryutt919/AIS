@@ -1,7 +1,15 @@
 # Data files
 /data/*
-!data/player_match_stats/
+!VAEP/data/player_match_stats/
+!VAEP/data/vaep_results/
+!VAEP/data/wyscout/
 data.zip
+
+# 특정 파일 추적
+!VAEP/data/player_match_stats/player_match_stats_combined_2017-18.csv
+!VAEP/data/vaep_results/player_season_vaep_atomic.csv
+!VAEP/data/wyscout/teams.json
+!VAEP/data/wyscout/players.json
 
 # Models - exclude everything except results folders
 models/**/*
