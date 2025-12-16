@@ -15,6 +15,8 @@ ENV/
 # Large Datasets & Archives (> 50MB protection)
 data/raw/*
 !data/raw/.gitkeep
+data/refined/*/*
+!data/refined/*/.gitkeep
 *.tar
 *.tar.gz
 *.zip
@@ -39,7 +41,9 @@ temp/
 .ipynb_checkpoints/
 *.html
 
-# Agent & AI Artifacts Exclusion
+# Local Working Documents
 .agents/
 Agent_handoff/
 CLAUDE.md
+AGENTS.md
+/docs/

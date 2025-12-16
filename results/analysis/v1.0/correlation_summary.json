@@ -2,65 +2,65 @@
   "match_level": [
     {
       "variable": "num_actions",
-      "spearman": 0.4004701057065057,
-      "pearson": 0.39155109464376747,
-      "n_samples": 86
+      "spearman": 0.19731360768925352,
+      "pearson": 0.25611218328698737,
+      "n_samples": 87
     },
     {
       "variable": "total_concedes_prob",
-      "spearman": 0.38246346064154685,
-      "pearson": 0.3797993179042155,
-      "n_samples": 86
+      "spearman": 0.17842719878546426,
+      "pearson": 0.24439017114339595,
+      "n_samples": 87
     },
     {
       "variable": "total_scores_prob",
-      "spearman": 0.3811515209290653,
-      "pearson": 0.3816700513469335,
-      "n_samples": 86
+      "spearman": 0.18898566862007857,
+      "pearson": 0.2533418940303098,
+      "n_samples": 87
     },
     {
       "variable": "vaep_total",
-      "spearman": -0.28158567900843756,
-      "pearson": -0.31684004361605356,
-      "n_samples": 86
+      "spearman": 0.17277413203463451,
+      "pearson": 0.0889682708960448,
+      "n_samples": 87
     },
     {
       "variable": "vaep_mean",
-      "spearman": 0.07941482547351994,
-      "pearson": -0.1047436490770988,
-      "n_samples": 86
+      "spearman": 0.06118077080333514,
+      "pearson": -0.21304476328965666,
+      "n_samples": 87
     }
   ],
   "season_level": [
     {
       "variable": "avg_vaep_per_game",
-      "spearman": -0.23551281251317532,
-      "pearson": -0.25063226594827664,
-      "n_samples": 84
+      "spearman": 0.22301529062172817,
+      "pearson": 0.1501318122192088,
+      "n_samples": 85
     },
     {
       "variable": "vaep_per90",
-      "spearman": -0.23551281251317532,
-      "pearson": -0.25063226594827664,
-      "n_samples": 84
+      "spearman": 0.22301529062172817,
+      "pearson": 0.1501318122192088,
+      "n_samples": 85
     },
     {
       "variable": "total_actions",
-      "spearman": 0.3524171046002354,
-      "pearson": 0.3169800107975151,
-      "n_samples": 84
+      "spearman": 0.14485329572384834,
+      "pearson": 0.17895225523302227,
+      "n_samples": 85
     },
     {
       "variable": "season_vaep_total",
-      "spearman": -0.23100534179929794,
-      "pearson": -0.24107326656868178,
-      "n_samples": 84
+      "spearman": 0.20951313734033375,
+      "pearson": 0.12109435171684686,
+      "n_samples": 85
     },
     {
       "variable": "num_games",
-      "spearman": -0.18795293893891696,
-      "pearson": -0.4009952338602632,
-      "n_samples": 84
+      "spearman": -0.18243188101416905,
+      "pearson": -0.3098598614512868,
+      "n_samples": 85
     }
   ]
 }

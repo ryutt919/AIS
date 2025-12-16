@@ -1,6 +1,6 @@
 {
   "model_type": "transformer",
-  "val_type_macro_f1": 0.09513243338834926,
-  "val_type_accuracy": 0.6794936708860759,
+  "val_type_macro_f1": 0.10491383599744401,
+  "val_type_accuracy": 0.709873417721519,
   "total_eval_samples": 1975
 }
