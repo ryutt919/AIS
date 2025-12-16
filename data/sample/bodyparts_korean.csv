@@ -1,0 +1,7 @@
+﻿bodypart_id,bodypart_name,bodypart_name_korean
+0,foot,발
+1,head,머리
+2,other,기타
+3,head/other,머리/기타
+4,foot_left,왼발
+5,foot_right,오른발

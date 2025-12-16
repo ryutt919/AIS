@@ -1,0 +1,66 @@
+{
+  "match_level": [
+    {
+      "variable": "num_actions",
+      "spearman": 0.4004701057065057,
+      "pearson": 0.39155109464376747,
+      "n_samples": 86
+    },
+    {
+      "variable": "total_concedes_prob",
+      "spearman": 0.38246346064154685,
+      "pearson": 0.3797993179042155,
+      "n_samples": 86
+    },
+    {
+      "variable": "total_scores_prob",
+      "spearman": 0.3811515209290653,
+      "pearson": 0.3816700513469335,
+      "n_samples": 86
+    },
+    {
+      "variable": "vaep_total",
+      "spearman": -0.28158567900843756,
+      "pearson": -0.31684004361605356,
+      "n_samples": 86
+    },
+    {
+      "variable": "vaep_mean",
+      "spearman": 0.07941482547351994,
+      "pearson": -0.1047436490770988,
+      "n_samples": 86
+    }
+  ],
+  "season_level": [
+    {
+      "variable": "avg_vaep_per_game",
+      "spearman": -0.23551281251317532,
+      "pearson": -0.25063226594827664,
+      "n_samples": 84
+    },
+    {
+      "variable": "vaep_per90",
+      "spearman": -0.23551281251317532,
+      "pearson": -0.25063226594827664,
+      "n_samples": 84
+    },
+    {
+      "variable": "total_actions",
+      "spearman": 0.3524171046002354,
+      "pearson": 0.3169800107975151,
+      "n_samples": 84
+    },
+    {
+      "variable": "season_vaep_total",
+      "spearman": -0.23100534179929794,
+      "pearson": -0.24107326656868178,
+      "n_samples": 84
+    },
+    {
+      "variable": "num_games",
+      "spearman": -0.18795293893891696,
+      "pearson": -0.4009952338602632,
+      "n_samples": 84
+    }
+  ]
+}

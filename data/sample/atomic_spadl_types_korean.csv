@@ -1,0 +1,34 @@
+﻿type_id,type_name,type_name_korean,description,action_category,category
+0,pass,패스,일반적인 패스,패스/크로스,SPADL 기본
+1,cross,크로스,측면에서 중앙으로 보내는 크로스,패스/크로스,SPADL 기본
+2,throw_in,스로인,터치라인 밖으로 나간 공을 손으로 던지는 스로인,패스/크로스,SPADL 기본
+3,freekick_crossed,프리킥(크로스),크로스 형태의 프리킥,패스/크로스,SPADL 기본
+4,freekick_short,프리킥(짧은),짧게 차는 프리킥,세트피스,SPADL 기본
+5,corner_crossed,코너킥(크로스),크로스 형태의 코너킥,패스/크로스,SPADL 기본
+6,corner_short,코너킥(짧은),짧게 차는 코너킥,세트피스,SPADL 기본
+7,take_on,드리블 돌파,상대를 제치는 드리블 돌파,볼 컨트롤,SPADL 기본
+8,foul,파울,반칙 행위,반칙/징계,SPADL 기본
+9,tackle,태클,상대의 공을 뺏기 위한 태클,수비,SPADL 기본
+10,interception,인터셉트,상대 패스를 가로채는 인터셉트,수비,SPADL 기본
+11,shot,슛,일반적인 슛,슛/골,SPADL 기본
+12,shot_penalty,페널티킥,페널티 박스 내 반칙으로 얻은 페널티킥,슛/골,SPADL 기본
+13,shot_freekick,프리킥 슛,프리킥 상황에서의 직접 슛,슛/골,SPADL 기본
+14,keeper_save,골키퍼 선방,골키퍼의 슛 막기,골키퍼,SPADL 기본
+15,keeper_claim,골키퍼 캐치,골키퍼가 공중볼을 손으로 잡기,골키퍼,SPADL 기본
+16,keeper_punch,골키퍼 펀칭,골키퍼가 공중볼을 주먹으로 쳐내기,골키퍼,SPADL 기본
+17,keeper_pick_up,골키퍼 픽업,골키퍼가 땅볼을 손으로 잡기,골키퍼,SPADL 기본
+18,clearance,클리어런스,수비수가 위험 지역에서 공을 크게 걷어내기,수비,SPADL 기본
+19,bad_touch,잘못된 터치,공을 제대로 컨트롤하지 못한 터치,기타,SPADL 기본
+20,non_action,비액션,실제 액션이 아닌 상황,기타,SPADL 기본
+21,dribble,드리블,공을 발로 다루며 이동하는 드리블,볼 컨트롤,SPADL 기본
+22,goalkick,골킥,골라인 밖으로 나간 공을 골 구역에서 차는 골킥,슛/골,SPADL 기본
+23,receival,볼 리시브,패스를 받는 행위,볼 컨트롤,Atomic 확장
+24,interception,인터셉트,상대 패스를 가로채는 인터셉트,수비,SPADL 기본
+25,out,아웃,공이 경기장 밖으로 나감,게임 상태,Atomic 확장
+26,offside,오프사이드,오프사이드 반칙,게임 상태,Atomic 확장
+27,goal,골,골 득점,슛/골,Atomic 확장
+28,owngoal,자책골,자책골,슛/골,Atomic 확장
+29,yellow_card,옐로카드,경고(옐로카드),반칙/징계,Atomic 확장
+30,red_card,레드카드,퇴장(레드카드),반칙/징계,Atomic 확장
+31,corner,코너킥,코너킥 획득,세트피스,Atomic 확장
+32,freekick,프리킥,프리킥 획득,세트피스,Atomic 확장

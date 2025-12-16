@@ -1,0 +1,45 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.class
+
+# Virtual Environments & IDE
+.venv/
+env/
+venv/
+ENV/
+.env
+.vscode/
+.idea/
+
+# Large Datasets & Archives (> 50MB protection)
+data/raw/*
+!data/raw/.gitkeep
+*.tar
+*.tar.gz
+*.zip
+*.7z
+*.h5
+*.hdf5
+*.parquet
+
+# Heavy Model Weights & Checkpoints (> 50MB protection)
+*.pt
+*.pth
+*.bin
+*.onnx
+results/models/*/*.pt
+results/models/*/*.pth
+
+# Logs & Temporary Files
+*.log
+scratch/
+tmp/
+temp/
+.ipynb_checkpoints/
+*.html
+
+# Agent & AI Artifacts Exclusion
+.agents/
+Agent_handoff/
+CLAUDE.md
