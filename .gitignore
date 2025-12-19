@@ -1,0 +1,68 @@
+# Data files
+/data/*
+!VAEP/data/player_match_stats/
+!VAEP/data/vaep_results/
+!VAEP/data/wyscout/
+data.zip
+
+# 특정 파일 추적
+!VAEP/data/player_match_stats/player_match_stats_combined_2017-18.csv
+!VAEP/data/vaep_results/player_season_vaep_atomic.csv
+!VAEP/data/wyscout/teams.json
+!VAEP/data/wyscout/players.json
+
+# Models - exclude everything except results folders
+models/**/*
+!models/**/
+!models/*/results/
+!models/*/results/**
+
+# Python cache
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/*.pyd
+.ipynb_checkpoints/
+
+# Logs / temp
+*.log
+*.pid
+
+# Experiment outputs (generated)
+nextAction/runs/**
+xpass/logs/**
+!xpass/logs/**/.gitkeep
+xpass/outputs/**
+!xpass/outputs/**/.gitkeep
+xpass/scripts_xpass/runs/**
+
+# Ignore common large/binary dataset and model files
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.tar.bz2
+*.tar.xz
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.pth
+*.pt
+*.ckpt
+*.onnx
+*.pb
+*.tfrecord
+*.tfrecords
+*.parquet
+*.feather
+*.sqlite
+*.db
+
+# Ignore Python virtual environments
+ais_venv/
+venv/
+env/
+
+# Allow keeping empty folders via .gitkeep even when parent dir is ignored
+!**/.gitkeep
